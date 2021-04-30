@@ -1,0 +1,218 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>多线程的一些思考 | bairdweng</title>
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619777833611">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="多线程的一些思考 | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="1. 为什么使用多线程？
+主要是利用CPU多核的优势，并行处理一些任务。一旦涉及到多任务处理，就是产生数据不一致的问题，这时候就需要有锁的来确保数据的统一跟安全。
+2. 数据放在哪里，为什么会数据不安全呢？
+例如有个变量 int = 100..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://bairdweng.github.io">
+  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619777833611" alt="">
+  </a>
+  <h1 class="site-title">
+    bairdweng
+  </h1>
+  <p class="site-description">
+    个人笔记
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              多线程的一些思考
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-30
+              </span>
+              <span>
+                3 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h5 id="1-为什么使用多线程">1. 为什么使用多线程？</h5>
+<p>主要是利用CPU多核的优势，并行处理一些任务。一旦涉及到多任务处理，就是产生数据不一致的问题，这时候就需要有锁的来确保数据的统一跟安全。</p>
+<h5 id="2-数据放在哪里为什么会数据不安全呢">2. 数据放在哪里，为什么会数据不安全呢？</h5>
+<p>例如有个变量 int = 100；然后开启3个线程对他进行累加1000次，预期应该是3000，但实际上可能更小，原因是，在加的过程中分为，读，改，写三个步骤，此时的步骤不是原子性，假如线程1现在读的数据是300，由于没有加锁，线程2在此刻已经完成了三个步骤，数字已经改成了301。如何这时候线程1在写回去，数据变成了301，但实际应该是302。</p>
+<h5 id="3-ios中线程的主要方式有哪些">3. iOS中线程的主要方式有哪些？</h5>
+<ol>
+<li>
+<p>C语言底层的，主要是pthread，这个是跨平台的api，是用C语言写的。</p>
+</li>
+<li>
+<p>NSThread就是OC实现的一套，底层封装了pthread，主要的api有</p>
+<blockquote>
+<ol>
+<li>获取当前的线程。</li>
+<li>让线程休眠。</li>
+<li>设置target，action的方式，也可以设置block回调的方式。</li>
+<li>可以管理线程的生命周期，开始-&gt;结束，各种状态的获取等。</li>
+</ol>
+</blockquote>
+</li>
+<li>
+<p>GCD的实现。</p>
+</li>
+<li>
+<p>NSOperation的实现。</p>
+</li>
+</ol>
+<h5 id="5-关于nsopration">5. 关于NSOpration</h5>
+<ol>
+<li>主要面向对象嘛，可以将类似网络请求，耗时的任务封装成一个任务。</li>
+<li>然后执行，里面也可以控制状态，例如是否取消是否暂停之类的。</li>
+</ol>
+<h5 id="4-关于gcd的使用">4. 关于GCD的使用</h5>
+<ol>
+<li><strong>队列</strong>：主要影响的是任务的执行方式，iOS下的队列主要有<strong>DISPATCH_QUEUE_SERIAL</strong>队列，<strong>DISPATCH_QUEUE_CONCURRENT</strong>队列，<strong>Main Dispatch Queue</strong>（主队列一定是<strong>串行</strong>执行）。</li>
+<li><strong>syn asyn：</strong> 二者主要的区别是能否开启新的线程。异步能够开启新的线程，而同步不能。</li>
+</ol>
+<h5 id="5关于线程的通讯">5.关于线程的通讯</h5>
+<ol>
+<li>最简单就是GCD SYNC 或者 ASYNC，然后在主线程刷新Main</li>
+<li>线程组的使用，分组执行任务，什么情况会这样有应用场景吗？</li>
+<li>执行3个耗时任务，然后执行通知 dispatch_group_create -&gt; dispatch_group_async-&gt;dispatch_group_notify。</li>
+</ol>
+<h5 id="6-关于锁的一些总结">6. 关于锁的一些总结</h5>
+<ol>
+<li>自旋锁，互斥锁，读写锁。</li>
+</ol>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#1-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8%E5%A4%9A%E7%BA%BF%E7%A8%8B">1. 为什么使用多线程？</a></li>
+<li><a href="#2-%E6%95%B0%E6%8D%AE%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E6%95%B0%E6%8D%AE%E4%B8%8D%E5%AE%89%E5%85%A8%E5%91%A2">2. 数据放在哪里，为什么会数据不安全呢？</a></li>
+<li><a href="#3-ios%E4%B8%AD%E7%BA%BF%E7%A8%8B%E7%9A%84%E4%B8%BB%E8%A6%81%E6%96%B9%E5%BC%8F%E6%9C%89%E5%93%AA%E4%BA%9B">3. iOS中线程的主要方式有哪些？</a></li>
+<li><a href="#5-%E5%85%B3%E4%BA%8Ensopration">5. 关于NSOpration</a></li>
+<li><a href="#4-%E5%85%B3%E4%BA%8Egcd%E7%9A%84%E4%BD%BF%E7%94%A8">4. 关于GCD的使用</a></li>
+<li><a href="#5%E5%85%B3%E4%BA%8E%E7%BA%BF%E7%A8%8B%E7%9A%84%E9%80%9A%E8%AE%AF">5.关于线程的通讯</a></li>
+<li><a href="#6-%E5%85%B3%E4%BA%8E%E9%94%81%E7%9A%84%E4%B8%80%E4%BA%9B%E6%80%BB%E7%BB%93">6. 关于锁的一些总结</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
+  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>
