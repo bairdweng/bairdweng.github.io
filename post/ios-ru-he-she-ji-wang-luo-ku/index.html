@@ -1,0 +1,366 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iOS如何设计网络库? | bairdweng</title>
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619780688797">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="iOS如何设计网络库? | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="1. 几个思考，设计网络库要解决什么问题？
+
+各种请求参数的封装，请求方式。get，post，回调的分类，返回数组或者是字典。
+设计请求的可靠性，例如一些支付之类的需要自动重发。可以设置一个枚举类型，需不需要重发，重发次数的配置等。
+设计请..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://bairdweng.github.io">
+  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619780688797" alt="">
+  </a>
+  <h1 class="site-title">
+    bairdweng
+  </h1>
+  <p class="site-description">
+    个人笔记
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              iOS如何设计网络库?
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-30
+              </span>
+              <span>
+                6 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h4 id="1-几个思考设计网络库要解决什么问题">1. 几个思考，设计网络库要解决什么问题？</h4>
+<ol>
+<li>各种请求参数的封装，请求方式。get，post，回调的分类，返回数组或者是字典。</li>
+<li>设计请求的可靠性，例如一些支付之类的需要自动重发。可以设置一个枚举类型，需不需要重发，重发次数的配置等。</li>
+<li>设计请求依赖，例如同事发多个请求，统一回调。</li>
+<li>全局的配置，头部信息的设置。</li>
+<li>分层设计，基础请求，业务分层。</li>
+<li>缓存的设计，例如一些不经常变动的请求可以设置一个时间，例如3分钟，在3分钟重新获取将不会发起新的请求。</li>
+</ol>
+<h4 id="2-xmnetworking的实现">2. XMNetworking的实现</h4>
+<ol>
+<li>
+<p>全局的网络配置，请求头，baseURL，公共参数。多个BaseURL怎么搞，是否可以新建一个管理类，根据不同的URL进行切换？这是个问题。</p>
+<pre><code class="language-objective-c">[XMCenter setupConfig:^(XMConfig *config) {
+    config.generalServer = @&quot;general server address&quot;;
+    config.generalHeaders = @{@&quot;general-header&quot;: @&quot;general header value&quot;};
+    config.generalParameters = @{@&quot;general-parameter&quot;: @&quot;general parameter value&quot;};
+    config.generalUserInfo = nil;
+    config.callbackQueue = dispatch_get_main_queue();
+#ifdef DEBUG
+    config.consoleLog = YES;
+#endif
+}];
+</code></pre>
+</li>
+<li>
+<p>GET请求，这里有一个Request对象，可以设置server跟api。</p>
+<pre><code class="language-objective-c">[XMCenter sendRequest:^(XMRequest *request) {
+    request.url = @&quot;http://example.com/v1/foo/bar&quot;;
+    //request.server = @&quot;http://example.com/v1/&quot;;
+    //request.api = @&quot;foo/bar&quot;;
+    request.parameters = @{@&quot;param1&quot;: @&quot;value1&quot;, @&quot;param2&quot;: @&quot;value2&quot;};
+    request.headers = @{@&quot;User-Agent&quot;: @&quot;Custom User Agent&quot;};
+    request.httpMethod = kXMHTTPMethodGET;
+} onSuccess:^(id responseObject) {
+   NSLog(@&quot;onSuccess: %@&quot;, responseObject);
+} onFailure:^(NSError *error) {
+   NSLog(@&quot;onFailure: %@&quot;, error);
+} onFinished:^(id responseObject, NSError *error) {
+   NSLog(@&quot;onFinished&quot;);
+}];
+</code></pre>
+</li>
+<li>
+<p>上传请求</p>
+<pre><code class="language-objective-c">// `NSData` form data.
+UIImage *image = [UIImage imageNamed:@&quot;testImage&quot;];
+NSData *fileData1 = UIImageJPEGRepresentation(image, 1.0);
+// `NSURL` form data.
+NSString *path = [NSHomeDirectory() stringByAppendingString:@&quot;/Documents/testImage.png&quot;];
+NSURL *fileURL2 = [NSURL fileURLWithPath:path isDirectory:NO];
+
+[XMCenter sendRequest:^(XMRequest *request) {
+    request.server = @&quot;http://example.com/v1/&quot;;
+    request.api = @&quot;foo/bar&quot;;
+    request.requestType = kXMRequestUpload;
+    [request addFormDataWithName:@&quot;image[]&quot; fileName:@&quot;temp.jpg&quot; mimeType:@&quot;image/jpeg&quot; fileData:fileData1];
+    [request addFormDataWithName:@&quot;image[]&quot; fileURL:fileURL2];
+    // see `XMUploadFormData` for more details.
+} onProgress:^(NSProgress *progress) {
+    // the progress block is running on the session queue.
+    if (progress) {
+        NSLog(@&quot;onProgress: %f&quot;, progress.fractionCompleted);
+    }
+} onSuccess:^(id responseObject) {
+    NSLog(@&quot;onSuccess: %@&quot;, responseObject);
+} onFailure:^(NSError *error) {
+    NSLog(@&quot;onFailure: %@&quot;, error);
+} onFinished:^(id responseObject, NSError *error) {
+    NSLog(@&quot;onFinished&quot;);
+}]
+</code></pre>
+</li>
+<li>
+<p>下载请求</p>
+<pre><code class="language-objc">[XMCenter sendRequest:^(XMRequest *request) {
+    request.url = @&quot;http://example.com/v1/testDownFile.zip&quot;;
+    request.downloadSavePath = [NSHomeDirectory() stringByAppendingString:@&quot;/Documents/&quot;];
+    request.requestType = kXMRequestDownload;
+} onProgress:^(NSProgress *progress) {
+    // the progress block is running on the session queue.
+    if (progress) {
+        NSLog(@&quot;onProgress: %f&quot;, progress.fractionCompleted);
+    }
+} onSuccess:^(id responseObject) {
+    NSLog(@&quot;onSuccess: %@&quot;, responseObject);
+} onFailure:^(NSError *error) {
+    NSLog(@&quot;onFailure: %@&quot;, error);
+}];
+</code></pre>
+</li>
+<li>
+<p>自定义响应逻辑。这里是全局的响应吗？</p>
+<pre><code class="language-objective-c">[XMCenter setResponseProcessBlock:^(XMRequest *request, id responseObject, NSError *__autoreleasing *error) {
+    // 自定义响应结果处理逻辑，如果 `*error` 被赋值，则接下来会执行 failure block。
+}];
+</code></pre>
+</li>
+<li>
+<p>批量请求，这里是否有先后啊，里面有队列的设计吗？</p>
+<pre><code class="language-objective-c">[XMCenter sendBatchRequest:^(XMBatchRequest *batchRequest) {
+    XMRequest *request1 = [XMRequest request];
+    request1.url = @&quot;server url 1&quot;;
+    // set other properties for request1
+        
+    XMRequest *request2 = [XMRequest request];
+    request2.url = @&quot;server url 2&quot;;
+    // set other properties for request2
+        
+    [batchRequest.requestArray addObject:request1];
+    [batchRequest.requestArray addObject:request2];
+} onSuccess:^(NSArray&lt;id&gt; *responseObjects) {
+    NSLog(@&quot;onSuccess: %@&quot;, responseObjects);
+} onFailure:^(NSArray&lt;id&gt; *errors) {
+    NSLog(@&quot;onFailure: %@&quot;, errors);
+} onFinished:^(NSArray&lt;id&gt; *responseObjects, NSArray&lt;id&gt; *errors) {
+    NSLog(@&quot;onFinished&quot;);
+}];
+</code></pre>
+</li>
+<li>
+<p>请求相互依赖，链式请求，这个怎么实现的，有点好奇哦？</p>
+<blockquote>
+<p>返回自己</p>
+<pre><code class="language-objective-c">- (XMChainRequest *)onFirst:(XMRequestConfigBlock)firstBlock;
+- (XMChainRequest *)onNext:(XMBCNextBlock)nextBlock;
+</code></pre>
+</blockquote>
+<pre><code class="language-objective-c">[XMCenter sendChainRequest:^(XMChainRequest *chainRequest) {
+    [[[[chainRequest onFirst:^(XMRequest *request) {
+        request.url = @&quot;server url 1&quot;;
+        // set other properties for request
+    }] onNext:^(XMRequest *request, id responseObject, BOOL *sendNext) {
+        NSDictionary *params = responseObject;
+        if (params.count &gt; 0) {
+            request.url = @&quot;server url 2&quot;;
+            request.parameters = params;
+        } else {
+            *sendNext = NO;
+        }
+    }] onNext:^(XMRequest *request, id responseObject, BOOL *sendNext) {
+        request.url = @&quot;server url 3&quot;;
+        request.parameters = @{@&quot;param1&quot;: @&quot;value1&quot;, @&quot;param2&quot;: @&quot;value2&quot;};
+    }] onNext: ...];    
+} onSuccess:^(NSArray&lt;id&gt; *responseObjects) {
+    NSLog(@&quot;onSuccess: %@&quot;, responseObjects);
+} onFailure:^(NSArray&lt;id&gt; *errors) {
+    NSLog(@&quot;onFailure: %@&quot;, errors);
+} onFinished:^(NSArray&lt;id&gt; *responseObjects, NSArray&lt;id&gt; *errors) {
+    NSLog(@&quot;onFinished&quot;);
+}];
+</code></pre>
+</li>
+<li>
+<p>取消网络请求，怎么实现？</p>
+</li>
+<li>
+<p>网络可连接性检查</p>
+</li>
+<li>
+<p>请求的本地证书校验，为什么要校验，自定义的HTTPS证书？</p>
+</li>
+</ol>
+<h4 id="3-上传是怎么处理的">3. 上传是怎么处理的？</h4>
+<ol>
+<li>
+<p>转化成了NSData，那么请求头的content-type是什么？</p>
+<blockquote>
+<p>text/html ： HTML格式</p>
+<p>text/plain ：纯文本格式</p>
+<p>text/xml ： XML格式</p>
+<p>image/gif ：gif图片格式</p>
+<p>image/jpeg ：jpg图片格式</p>
+<p>image/png：png图片格式</p>
+<p>application/xhtml+xml ：XHTML格式</p>
+<p>application/xml： XML数据格式</p>
+<p>application/atom+xml ：Atom XML聚合格式</p>
+<p>application/json： JSON数据格式</p>
+<p>application/pdf：pdf格式</p>
+<p>application/msword ： Word文档格式</p>
+<p>application/octet-stream ： 二进制流数据（如常见的文件下载）</p>
+<p>application/x-www-form-urlencoded form表单数据被编码为key/value格式发送到服务器  post默认格式key1=1&amp;key2=2</p>
+<p>multipart/form-data ： 需要在表单中进行文件上传时，就需要使用该格式 --ZnGpDtePMx0KrHh_G0X99Yef9r8JZsRJSXC--</p>
+</blockquote>
+</li>
+<li>
+<p>由上图面所指示？multipart/form-data 的格式是二进制流，为啥说http是字节传输？</p>
+</li>
+</ol>
+<h4 id="4-nsursetion">4. NSURSetion</h4>
+<h4 id="5-怎么设置重试">5. 怎么设置重试</h4>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#1-%E5%87%A0%E4%B8%AA%E6%80%9D%E8%80%83%E8%AE%BE%E8%AE%A1%E7%BD%91%E7%BB%9C%E5%BA%93%E8%A6%81%E8%A7%A3%E5%86%B3%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98">1. 几个思考，设计网络库要解决什么问题？</a></li>
+<li><a href="#2-xmnetworking%E7%9A%84%E5%AE%9E%E7%8E%B0">2. XMNetworking的实现</a></li>
+<li><a href="#3-%E4%B8%8A%E4%BC%A0%E6%98%AF%E6%80%8E%E4%B9%88%E5%A4%84%E7%90%86%E7%9A%84">3. 上传是怎么处理的？</a></li>
+<li><a href="#4-nsursetion">4. NSURSetion</a></li>
+<li><a href="#5-%E6%80%8E%E4%B9%88%E8%AE%BE%E7%BD%AE%E9%87%8D%E8%AF%95">5. 怎么设置重试</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://bairdweng.github.io/post/ios-gao-ji-ji-qiao-zong-jie/">
+              <h3 class="post-title">
+                 iOS高级技巧总结
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
+  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

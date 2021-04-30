@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://bairdweng.github.io</id>
     <title>bairdweng</title>
-    <updated>2021-04-30T10:24:52.998Z</updated>
+    <updated>2021-04-30T11:04:51.592Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://bairdweng.github.io"/>
     <link rel="self" href="https://bairdweng.github.io/atom.xml"/>
@@ -11,10 +11,73 @@
     <icon>https://bairdweng.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, bairdweng</rights>
     <entry>
-        <title type="html"><![CDATA[多线程的一些思考]]></title>
-        <id>https://bairdweng.github.io/post/duo-xian-cheng-de-yi-xie-si-kao/</id>
-        <link href="https://bairdweng.github.io/post/duo-xian-cheng-de-yi-xie-si-kao/">
+        <title type="html"><![CDATA[UIWindow相关]]></title>
+        <id>https://bairdweng.github.io/post/uiwindow-xiang-guan/</id>
+        <link href="https://bairdweng.github.io/post/uiwindow-xiang-guan/">
         </link>
-        <updated>2021-04-30T10:15:44.000Z</updated>
+        <updated>2021-04-30T11:04:10.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[UIView的几个刷新方法]]></title>
+        <id>https://bairdweng.github.io/post/uiview-de-ji-ge-shua-xin-fang-fa/</id>
+        <link href="https://bairdweng.github.io/post/uiview-de-ji-ge-shua-xin-fang-fa/">
+        </link>
+        <updated>2021-04-30T11:03:48.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[CABaseAnimation常用处理]]></title>
+        <id>https://bairdweng.github.io/post/cabaseanimation-chang-yong-chu-li/</id>
+        <link href="https://bairdweng.github.io/post/cabaseanimation-chang-yong-chu-li/">
+        </link>
+        <updated>2021-04-30T11:03:23.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[关于iOS手势的一些处理方式]]></title>
+        <id>https://bairdweng.github.io/post/guan-yu-ios-shou-shi-de-yi-xie-chu-li-fang-shi/</id>
+        <link href="https://bairdweng.github.io/post/guan-yu-ios-shou-shi-de-yi-xie-chu-li-fang-shi/">
+        </link>
+        <updated>2021-04-30T11:02:50.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[从CAlayer的position和AnchorPoint说起]]></title>
+        <id>https://bairdweng.github.io/post/cong-calayer-de-position-he-anchorpoint-shuo-qi/</id>
+        <link href="https://bairdweng.github.io/post/cong-calayer-de-position-he-anchorpoint-shuo-qi/">
+        </link>
+        <updated>2021-04-30T11:01:57.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[load加载]]></title>
+        <id>https://bairdweng.github.io/post/load-jia-zai/</id>
+        <link href="https://bairdweng.github.io/post/load-jia-zai/">
+        </link>
+        <updated>2021-04-30T11:01:25.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[crash防护方案]]></title>
+        <id>https://bairdweng.github.io/post/crash-fang-hu-fang-an/</id>
+        <link href="https://bairdweng.github.io/post/crash-fang-hu-fang-an/">
+        </link>
+        <updated>2021-04-30T11:00:41.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[异常捕获方法总结]]></title>
+        <id>https://bairdweng.github.io/post/yi-chang-bu-huo-fang-fa-zong-jie/</id>
+        <link href="https://bairdweng.github.io/post/yi-chang-bu-huo-fang-fa-zong-jie/">
+        </link>
+        <updated>2021-04-30T11:00:03.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[ 性能优化]]></title>
+        <id>https://bairdweng.github.io/post/xing-neng-you-hua/</id>
+        <link href="https://bairdweng.github.io/post/xing-neng-you-hua/">
+        </link>
+        <updated>2021-04-30T10:59:17.000Z</updated>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[iOS如何设计网络库?]]></title>
+        <id>https://bairdweng.github.io/post/ios-ru-he-she-ji-wang-luo-ku/</id>
+        <link href="https://bairdweng.github.io/post/ios-ru-he-she-ji-wang-luo-ku/">
+        </link>
+        <updated>2021-04-30T10:58:24.000Z</updated>
     </entry>
 </feed>

@@ -1,0 +1,223 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>关于内存地址的理解 | bairdweng</title>
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619780688797">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="关于内存地址的理解 | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="1. 表现形式
+0x7ffee73dbf18
+
+
+
+16进制，可以在线转换尝试理解。click
+
+
+位、字节、字是计算机数据存储的单位。位是最小的存储单位，每一个位存储一个1位的二进制码，一个字节由8位组成。而字通常为16、32或64个位组..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://bairdweng.github.io">
+  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619780688797" alt="">
+  </a>
+  <h1 class="site-title">
+    bairdweng
+  </h1>
+  <p class="site-description">
+    个人笔记
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              关于内存地址的理解
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-30
+              </span>
+              <span>
+                1 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h5 id="1-表现形式">1. 表现形式</h5>
+<pre><code class="language-objective-c">0x7ffee73dbf18
+</code></pre>
+<ol>
+<li>
+<p>16进制，可以在线转换尝试理解。<a href="https://tool.lu/hexconvert/">click</a></p>
+</li>
+<li>
+<p>位、字节、字是计算机数据存储的单位。位是最小的存储单位，每一个位存储一个1位的二进制码，一个字节由8位组成。而字通常为16、32或64个位组成。</p>
+</li>
+<li>
+<p>内存debug</p>
+<pre><code class="language-objective-c">memory read 0x122b098b0
+AF 55 1F 04 01 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+</code></pre>
+<ul>
+<li>iOS是小的端，8位倒过来看 10 00 00 10 40 F1 55 FA</li>
+</ul>
+</li>
+</ol>
+<h5 id="2-全面的内存调试">2. 全面的内存调试</h5>
+<blockquote>
+<p><a href="http://colin1994.github.io/2019/12/27/iOS-Memory-Debug/?utm_source=tuicool&amp;utm_medium=referral">URL</a></p>
+</blockquote>
+<ol>
+<li>Image lookup 可以定位到具体的代码行数</li>
+</ol>
+<pre><code class="language-shell">image lookup --address 0x1001b26c0
+</code></pre>
+<ol start="2">
+<li>
+<p>打开Zombie Objects 暴露更多的信息</p>
+<blockquote>
+<p>Edit Scheme —&gt; Diagnostics —&gt; Memory Management —&gt; Zombie Objects</p>
+</blockquote>
+</li>
+<li>
+<p>符号断点Symbolic Breakpoint</p>
+<blockquote>
+<p>__CFZombifyNSObject</p>
+</blockquote>
+</li>
+</ol>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#1-%E8%A1%A8%E7%8E%B0%E5%BD%A2%E5%BC%8F">1. 表现形式</a></li>
+<li><a href="#2-%E5%85%A8%E9%9D%A2%E7%9A%84%E5%86%85%E5%AD%98%E8%B0%83%E8%AF%95">2. 全面的内存调试</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://bairdweng.github.io/post/duo-xian-cheng-de-yi-xie-si-kao/">
+              <h3 class="post-title">
+                多线程的一些思考
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
+  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,286 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title> iOS高级技巧总结 | bairdweng</title>
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619780688797">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title=" iOS高级技巧总结 | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="1. 无痕埋点
+
+
+UIButton
+
+
+
+
+runtime交换UIControll endTrackingWithTouch方法。
+ Method endTrackingMethod = class_getInstanceMethod(s..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://bairdweng.github.io">
+  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619780688797" alt="">
+  </a>
+  <h1 class="site-title">
+    bairdweng
+  </h1>
+  <p class="site-description">
+    个人笔记
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+               iOS高级技巧总结
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-30
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h4 id="1-无痕埋点">1. 无痕埋点</h4>
+<ul>
+<li>
+<h5 id="uibutton">UIButton</h5>
+</li>
+</ul>
+<ol>
+<li>
+<p>runtime交换UIControll endTrackingWithTouch方法。</p>
+<pre><code class="language-objective-c"> Method endTrackingMethod = class_getInstanceMethod(self, @selector(endTrackingWithTouch:withEvent:));
+    Method ddEndTrackingMethod = class_getInstanceMethod(self, @selector(dd_endTrackingWithTouch:withEvent:));
+    method_exchangeImplementations(endTrackingMethod, ddEndTrackingMethod);
+</code></pre>
+</li>
+<li>
+<p>获取target</p>
+<pre><code class="language-objective-c"> //只监听UIButton
+    if (![self isMemberOfClass:[UIButton class]]) {
+        return;
+    }
+    
+    [self dd_endTrackingWithTouch:touch withEvent:event];
+    NSArray *targers = [self.allTargets allObjects];
+    if (targers.count &gt; 0) {
+        NSArray *actions = [self actionsForTarget:[targers firstObject] forControlEvent:UIControlEventTouchUpInside];
+        if (actions.count &gt; 0 &amp;&amp;
+            [[actions firstObject] length] &gt; 0) {
+            
+            NSString *eventId = [NSString stringWithFormat:@&quot;%@&amp;&amp;%@&quot;,NSStringFromClass([[targers firstObject] class]),[actions firstObject]];
+            NSDictionary *infoDictionary = [[targers firstObject] ddInfoDictionary];
+            [[DDAutoTrackerOperation sharedInstance] sendTrackerData:eventId
+                                                                info:infoDictionary];
+        }
+    }
+</code></pre>
+</li>
+</ol>
+<ul>
+<li>
+<p>UITableView</p>
+<pre><code class="language-objective-c">  Method setDelegateMethod = class_getInstanceMethod(self, @selector(setDelegate:));
+  Method ddSetDelegateMethod = class_getInstanceMethod(self, @selector(dd_setDelegate:));
+  method_exchangeImplementations(setDelegateMethod, ddSetDelegateMethod);
+</code></pre>
+</li>
+<li>
+<p>增加视图层级作为唯一ID。</p>
+</li>
+</ul>
+<h4 id="2-自定义导航栏">2. 自定义导航栏</h4>
+<ol>
+<li>
+<p>UIViewControllerInteractiveTransitioning</p>
+<pre><code class="language-objective-c">navigationController:animationControllerForOperation:fromViewController:toViewController:	
+</code></pre>
+<pre><code class="language-objective-c">/*
+  1. 获取动画来自的那个控制器
+     fromViewController
+     toViewController
+  2. 获取舞台containerView
+*/
+</code></pre>
+</li>
+<li>
+<p>runtime遍历它的所有成员变量</p>
+<pre><code>替换手势的实现
+</code></pre>
+</li>
+</ol>
+<h4 id="3-forwardinvocation-兼容问题">3.  forwardInvocation 兼容问题</h4>
+<pre><code class="language-objective-c">出现上诉问题的原因在于，当 aliasSelector 没有被找到的时候，我们没能将消息正常的转发，也就是没有实现一个 NSSelectorFromString(AspectsForwardInvocationSelectorName) ， 使得消息有机会重新转发回去的方法。因此解决方案也就呼之欲出了，我的做法是在对子类的 forwardInvocation 方法进行交换而不仅仅是替换，实现逻辑如下，强制生成一个 NSSelectorFromString(AspectsForwardInvocationSelectorName) 指向原对象的 forwardInvocation 的实现。
+</code></pre>
+<h4 id="4-卡顿检测">4. 卡顿检测</h4>
+<pre><code class="language-objective-c">- (void)startMonitor{
+    CFRunLoopObserverContext context = {0,(__bridge void*)self,NULL,NULL};
+    _observer = CFRunLoopObserverCreate(kCFAllocatorDefault,
+                                        kCFRunLoopAllActivities,
+                                        YES,
+                                        0,
+                                        &amp;runLoopObserverCallBack,
+                                        &amp;context);
+    CFRunLoopAddObserver(CFRunLoopGetMain(), _observer, kCFRunLoopCommonModes);
+    
+    // 创建信号
+    _semaphore = dispatch_semaphore_create(0);
+    
+    // 在子线程监控时长
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        while (YES)
+        {
+            //30ms则将堆栈记录下来
+            long st = dispatch_semaphore_wait(_semaphore, dispatch_time(DISPATCH_TIME_NOW, 30*NSEC_PER_MSEC));
+            if (st != 0)
+            {
+                if (_activity==kCFRunLoopBeforeSources || _activity==kCFRunLoopAfterWaiting)
+                {
+                    [self logStack];
+                }
+            }
+        }
+    });
+}
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#1-%E6%97%A0%E7%97%95%E5%9F%8B%E7%82%B9">1. 无痕埋点</a>
+<ul>
+<li><a href="#uibutton">UIButton</a></li>
+</ul>
+</li>
+<li><a href="#2-%E8%87%AA%E5%AE%9A%E4%B9%89%E5%AF%BC%E8%88%AA%E6%A0%8F">2. 自定义导航栏</a></li>
+<li><a href="#3-forwardinvocation-%E5%85%BC%E5%AE%B9%E9%97%AE%E9%A2%98">3.  forwardInvocation 兼容问题</a></li>
+<li><a href="#4-%E5%8D%A1%E9%A1%BF%E6%A3%80%E6%B5%8B">4. 卡顿检测</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://bairdweng.github.io/post/flutter-zu-jian-zong-jie/">
+              <h3 class="post-title">
+                flutter组件总结
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
+  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

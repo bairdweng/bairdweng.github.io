@@ -1,0 +1,544 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>crash防护方案 | bairdweng</title>
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619780688797">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="crash防护方案 | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="JJException
+1. 更新视图是否在主线程
+
+
+
+主要会采用方法交换的原理，hook的方法如下
+
+
+
+
+
+定义方法交换的宏定义
+#define DL_SWIZZLE(_class_, _orisel_, _swisel_) { \
+..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://bairdweng.github.io">
+  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619780688797" alt="">
+  </a>
+  <h1 class="site-title">
+    bairdweng
+  </h1>
+  <p class="site-description">
+    个人笔记
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              crash防护方案
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-30
+              </span>
+              <span>
+                5 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <p><a href="https://github.com/jezzmemo/JJException">JJException</a></p>
+<h5 id="1-更新视图是否在主线程">1. 更新视图是否在主线程</h5>
+<ul>
+<li>
+<blockquote>
+<p>主要会采用方法交换的原理，hook的方法如下</p>
+</blockquote>
+</li>
+</ul>
+<ol>
+<li>
+<p>定义方法交换的宏定义</p>
+<pre><code class="language-objective-c">#define DL_SWIZZLE(_class_, _orisel_, _swisel_) { \
+   \
+    Method originalMethod = class_getInstanceMethod(_class_, _orisel_);\
+    Method swizzledMethod = class_getInstanceMethod(_class_, _swisel_);\
+    BOOL didAddMethod = class_addMethod(_class_, \
+                    _orisel_,\
+                    method_getImplementation(swizzledMethod),\
+                    method_getTypeEncoding(swizzledMethod));\
+    \
+    if (didAddMethod) {\
+        class_replaceMethod(_class_,\
+                            _swisel_,\
+                            method_getImplementation(originalMethod),\
+                            method_getTypeEncoding(originalMethod));\
+    } else { \
+        method_exchangeImplementations(originalMethod, swizzledMethod);\
+    } \
+}
+
+</code></pre>
+</li>
+<li>
+<p>交换方法</p>
+<pre><code class="language-objective-c">+ (void)load {
+    static dispatch_once_t onceToken;
+    dispatch_once(&amp;onceToken, ^{
+        Class class = [self class];
+        [class swizzleSetNeedsLayout];
+        [class swizzleSetNeedsDisplay];
+        [class swizzleSetNeedsDisplayInRect];
+        [class swizzleSetNeedsUpdateConstraints];
+    });
+}
+</code></pre>
+<pre><code class="language-objective-c">+ (void)swizzleSetNeedsLayout {
+    SEL originalSelector = @selector(setNeedsLayout);
+    SEL swizzledSelector = @selector(zy_setNeedsLayout);
+    DL_SWIZZLE([self class],originalSelector,swizzledSelector)
+}
+</code></pre>
+<pre><code class="language-objective-c">+ (void)swizzleSetNeedsDisplay {
+    SEL originalSelector = @selector(setNeedsDisplay);
+    SEL swizzledSelector = @selector(zy_setNeedsDisplay);
+    DL_SWIZZLE([self class],originalSelector,swizzledSelector)
+}
+</code></pre>
+<pre><code class="language-objective-c">+(void)swizzleSetNeedsDisplayInRect {
+    SEL originalSelector = @selector(setNeedsDisplayInRect:);
+    SEL swizzledSelector = @selector(zy_setNeedsDisplayInRect:);
+    DL_SWIZZLE([self class],originalSelector,swizzledSelector)
+}
+</code></pre>
+<pre><code class="language-objective-c">+ (void)swizzleSetNeedsUpdateConstraints {
+    SEL originalSelector = @selector(setNeedsUpdateConstraints);
+    SEL swizzledSelector = @selector(zy_setNeedsUpdateConstraints);
+    DL_SWIZZLE([self class],originalSelector,swizzledSelector) 
+}
+</code></pre>
+<pre><code class="language-objective-c">-(void)zy_setNeedsLayout{
+    if (strcmp(dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL), dispatch_queue_get_label(dispatch_get_main_queue())) == 0) {
+        //running on main thread
+        [self zy_setNeedsLayout];
+        
+    }else{
+        NSLog(@&quot;%s ******* try to update ui not on main thread %@ &quot;,__FUNCTION__, self);
+        dispatch_async(dispatch_get_main_queue(),
+                       ^{
+            [self zy_setNeedsLayout];
+        });
+    }    
+}
+</code></pre>
+<pre><code class="language-objective-c">-(void)zy_setNeedsDisplay{
+    
+    if (strcmp(dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL), dispatch_queue_get_label(dispatch_get_main_queue())) == 0) {
+        //running on main thread
+        [self zy_setNeedsDisplay];
+        
+    }else{
+        NSLog(@&quot;%s ******* try to update ui not on main thread %@ &quot;,__FUNCTION__, self);
+        dispatch_async(dispatch_get_main_queue(),
+                       ^{
+            [self zy_setNeedsDisplay];
+        });
+    }
+}
+</code></pre>
+<pre><code class="language-objective-c">
+-(void)zy_setNeedsDisplayInRect:(CGRect)rect {
+    if (strcmp(dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL), dispatch_queue_get_label(dispatch_get_main_queue())) == 0) {
+        //running on main thread
+        [self zy_setNeedsDisplayInRect:rect];
+        
+    }else{
+        NSLog(@&quot;%s ******* try to update ui not on main thread %@ &quot;,__FUNCTION__, self);
+        dispatch_async(dispatch_get_main_queue(),
+                       ^{
+            [self zy_setNeedsDisplayInRect:rect];
+        });
+    }
+}
+</code></pre>
+<pre><code class="language-objective-c">
+-(void)zy_setNeedsUpdateConstraints {
+    if (strcmp(dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL), dispatch_queue_get_label(dispatch_get_main_queue())) == 0) {
+        //running on main thread
+        [self zy_setNeedsUpdateConstraints];
+        
+    }else{
+        NSLog(@&quot;%s ******* try to update ui not on main thread %@ &quot;,__FUNCTION__, self);
+        dispatch_async(dispatch_get_main_queue(),
+                       ^{
+            [self zy_setNeedsUpdateConstraints];
+        });
+    }    
+}
+</code></pre>
+</li>
+</ol>
+<h5 id="2kvo的安全">2.KVO的安全</h5>
+<blockquote>
+<p>同样的原理，hook add observer</p>
+</blockquote>
+<ol>
+<li>
+<p>定义key</p>
+<pre><code class="language-objective-c">static const void *keypathMapKey=&amp;keypathMapKey;
+static const void *kvoSafteyToggleKey=&amp;kvoSafteyToggleKey;
+</code></pre>
+</li>
+<li>
+<p>自定义hashMap</p>
+<pre><code class="language-objective-c">- (NSMapTable &lt;id, NSHashTable&lt;NSString *&gt; *&gt; *)keypathMap {
+    NSMapTable *keypathMap = objc_getAssociatedObject(self, &amp;keypathMapKey);
+    if (keypathMap) {
+        return keypathMap;
+    }
+    keypathMap = [[NSMapTable alloc] initWithKeyOptions:NSPointerFunctionsWeakMemory|NSPointerFunctionsObjectPointerPersonality valueOptions:NSPointerFunctionsStrongMemory|NSPointerFunctionsObjectPointerPersonality capacity:0];
+    objc_setAssociatedObject(self, &amp;keypathMapKey, keypathMap, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return keypathMap;
+}
+
+- (void)setKeypathMap:(id)map {
+    if (map) {
+        objc_setAssociatedObject(self, keypathMapKey, map, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
+
+-(BOOL)kvoSafteyToggle {
+    return  [objc_getAssociatedObject(self, &amp;kvoSafteyToggleKey) boolValue];
+}
+
+-(void)setKvoSafteyToggle:(BOOL)on {
+    objc_setAssociatedObject(self, &amp;kvoSafteyToggleKey, @(on), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+</code></pre>
+</li>
+<li>
+<p>load</p>
+<pre><code class="language-objective-c">+(void)load{
+    static dispatch_once_t onceToken;
+    dispatch_once(&amp;onceToken, ^{
+        [self swizzleAddObserver];
+        [self swizzleRemoveObserver];
+    });
+}
+</code></pre>
+</li>
+<li>
+<p>hook</p>
+<pre><code class="language-objective-c">+(void)swizzleAddObserver {
+    SEL originalSelector = @selector(addObserver:forKeyPath:options:context:);
+    SEL swizzledSelector = @selector(zy_addObserver:forKeyPath:options:context:);
+    DL_SWIZZLE(originalSelector,swizzledSelector)
+}
+</code></pre>
+<pre><code class="language-objective-c">+(void)swizzleRemoveObserver {
+    SEL originalSelector = @selector(removeObserver:forKeyPath:);
+    SEL swizzledSelector = @selector(zy_removeObserver:forKeyPath:);
+    DL_SWIZZLE(originalSelector,swizzledSelector)
+}
+</code></pre>
+<pre><code class="language-objective-c">-(void)zy_addObserver:(NSObject *)observer forKeyPath:(NSString *)keyPath options:(NSKeyValueObservingOptions)options context:(void *)context {
+    if (self.kvoSafteyToggle) {        
+        if (!observer || !keyPath) {
+            return;
+        }        
+        NSHashTable *table = [[self keypathMap] objectForKey:observer];
+        if (!table) {
+            table =  [[NSHashTable alloc] initWithOptions:NSPointerFunctionsWeakMemory|NSPointerFunctionsObjectPointerPersonality capacity:0];
+            [table addObject:keyPath];
+            [[self keypathMap] setObject:table forKey:observer];
+            [self zy_addObserver:observer forKeyPath:keyPath options:options context:context];
+            return;
+        }
+        if ([table containsObject:keyPath]) {
+            NSLog(@&quot;%s ******* donot add the same observer and keypath %@ &quot;,__FUNCTION__, self);
+            return;
+        }        
+        [table addObject:keyPath];
+    }
+    [self zy_addObserver:observer forKeyPath:keyPath options:options context:context];   
+}
+</code></pre>
+<pre><code class="language-objective-c">-(void)zy_removeObserver:(NSObject *)observer forKeyPath:(NSString *)keyPath {
+    if (self.kvoSafteyToggle) {
+        if(!observer || !keyPath){
+            return;
+        }
+        NSHashTable *table = [[self keypathMap] objectForKey:observer];
+        if (!table) {
+            return;
+        }
+        if (![table containsObject:keyPath]) {
+            NSLog(@&quot;%s ******* donot remove the keypath not existed %@ &quot;,__FUNCTION__, self);   
+            return;
+        }        
+        [table removeObject:keyPath];
+    }
+    [self zy_removeObserver:observer forKeyPath:keyPath];
+}
+</code></pre>
+</li>
+</ol>
+<h5 id="3-找不到方法crash">3. 找不到方法crash</h5>
+<ol>
+<li>
+<p>定义代理对象</p>
+<pre><code class="language-objective-c">@interface _UnregSelObjectProxy : NSObject
+  
++ (instancetype) sharedInstance;
+
+@end
+
+@implementation _UnregSelObjectProxy
+  
++ (instancetype) sharedInstance {
+    static _UnregSelObjectProxy *instance = nil;
+    static dispatch_once_t once_token;
+    dispatch_once(&amp;once_token, ^{
+        instance = [[_UnregSelObjectProxy alloc] init];
+    });
+    return instance;
+}
+
++ (BOOL) resolveInstanceMethod:(SEL)selector {   
+    class_addMethod([self class], selector,(IMP)emptyMethodIMP,&quot;v@:&quot;);
+    return YES;
+}
+
+void emptyMethodIMP() {
+}
+
+@end
+</code></pre>
+</li>
+<li>
+<p>load</p>
+<pre><code class="language-objective-c">+(void)load {
+    static dispatch_once_t onceToken;
+    dispatch_once(&amp;onceToken, ^{
+        [self swizzleMSFS];
+        [self swizzleFI];
+    });
+}
+</code></pre>
+</li>
+<li>
+<p>hook</p>
+<pre><code class="language-objective-c">+(void)swizzleMSFS {    
+    SEL originalSelector = @selector(methodSignatureForSelector:);
+    SEL swizzledSelector = @selector(zy_methodSignatureForSelector:);
+    DL_SWIZZLE([self class],originalSelector,swizzledSelector)
+}
+
++(void)swizzleFI {
+    SEL originalSelector = @selector(forwardInvocation:);
+    SEL swizzledSelector = @selector(zy_forwardInvocation:);
+    DL_SWIZZLE([self class],originalSelector,swizzledSelector)
+}
+</code></pre>
+</li>
+<li>
+<p>imp</p>
+<pre><code class="language-objective-c">- (NSMethodSignature *)zy_methodSignatureForSelector:(SEL)sel{
+    NSMethodSignature *sig;
+    sig = [self zy_methodSignatureForSelector:sel];
+    if (sig) {
+        return sig;
+    }
+    //donnot handle system uikeyboard selectors
+    if ([NSStringFromClass([self class]) containsString:@&quot;UIKeyboard&quot;]
+        ) {
+        return [self zy_methodSignatureForSelector:sel];
+    }
+    sig = [[_UnregSelObjectProxy sharedInstance] zy_methodSignatureForSelector:sel];
+    if (sig){
+        return sig;
+    }
+    return nil;
+}
+
+- (void)zy_forwardInvocation:(NSInvocation *)anInvocation {   
+   [anInvocation invokeWithTarget:[_UnregSelObjectProxy sharedInstance]];
+    NSLog(@&quot;******* unrecognized selctor invoked %@ &quot;, self);
+}
+</code></pre>
+</li>
+</ol>
+<h5 id="4-数组字典等">4.  数组字典等</h5>
+<ol>
+<li>
+<p>load</p>
+<pre><code class="language-objective-c">+ (void)load {
+    static dispatch_once_t onceToken;
+    dispatch_once(&amp;onceToken, ^{
+      DL_SWIZZLE(NSClassFromString(@&quot;__NSArrayI&quot;),@selector(objectAtIndex:),@selector(yb_objectAtIndex2:))
+        DL_SWIZZLE(NSClassFromString(@&quot;__NSArrayI&quot;),@selector(objectAtIndexedSubscript:),@selector(yb_objectAtIndexedSubscript:))
+        
+    });
+}
+</code></pre>
+</li>
+<li>
+<p>imp</p>
+<pre><code class="language-objective-c">- (id)yb_objectAtIndex:(NSInteger)index {
+    if (index &lt; self.count) {
+        return [self yb_objectAtIndex:index];
+    } else {
+        NSLog(@&quot;数组越界了%s&quot;,__func__);
+        return nil;
+    }
+}
+
+- (id)yb_objectAtIndexedSubscript:(NSInteger)index {
+    if (index &lt; self.count) {
+        return [self yb_objectAtIndexedSubscript:index];
+    } else {
+        NSLog(@&quot;数组越界了%s&quot;,__func__);
+        return nil;
+    }
+}
+</code></pre>
+</li>
+</ol>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#1-%E6%9B%B4%E6%96%B0%E8%A7%86%E5%9B%BE%E6%98%AF%E5%90%A6%E5%9C%A8%E4%B8%BB%E7%BA%BF%E7%A8%8B">1. 更新视图是否在主线程</a></li>
+<li><a href="#2kvo%E7%9A%84%E5%AE%89%E5%85%A8">2.KVO的安全</a></li>
+<li><a href="#3-%E6%89%BE%E4%B8%8D%E5%88%B0%E6%96%B9%E6%B3%95crash">3. 找不到方法crash</a></li>
+<li><a href="#4-%E6%95%B0%E7%BB%84%E5%AD%97%E5%85%B8%E7%AD%89">4.  数组字典等</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://bairdweng.github.io/post/yi-chang-bu-huo-fang-fa-zong-jie/">
+              <h3 class="post-title">
+                异常捕获方法总结
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
+  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

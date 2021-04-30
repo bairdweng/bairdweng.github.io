@@ -1,0 +1,224 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CABaseAnimation常用处理 | bairdweng</title>
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619780688797">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="CABaseAnimation常用处理 | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="上下移动动画
++ (void)setUpDownAnimationToView:(UIView *)view {
+ [view.layer removeAllAnimations];
+ CABasicAnimation * animatio..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://bairdweng.github.io">
+  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619780688797" alt="">
+  </a>
+  <h1 class="site-title">
+    bairdweng
+  </h1>
+  <p class="site-description">
+    个人笔记
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              CABaseAnimation常用处理
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-30
+              </span>
+              <span>
+                2 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h5 id="上下移动动画">上下移动动画</h5>
+<pre><code class="language-objective-c">+ (void)setUpDownAnimationToView:(UIView *)view {
+ [view.layer removeAllAnimations];
+ CABasicAnimation * animation = [CABasicAnimation animationWithKeyPath:@&quot;transform.translation.y&quot;];
+ animation.duration = 0.5;
+ animation.autoreverses = YES;
+ animation.repeatCount = MAXFLOAT;
+ animation.removedOnCompletion = NO;
+ CGFloat currentTy = view.transform.ty;
+ animation.fromValue = @(currentTy - 5.f);
+ animation.toValue = @(currentTy + 5.f);
+ animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+ [view.layer addAnimation:animation forKey:@&quot;UPDOWNANIMATION&quot;];
+}
+</code></pre>
+<h5 id="放大缩小动画">放大缩小动画</h5>
+<pre><code class="language-objective-c">+ (void)setScaleAnimationToView:(UIView *)view {
+    [view.layer removeAllAnimations];
+    CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@&quot;transform.scale&quot;];
+    // 动画持续时间
+    animation.duration = 0.7;
+    // 重复次数
+    animation.repeatCount = MAXFLOAT;
+    // 动画结束时执行逆动画
+    animation.autoreverses = YES;
+    animation.removedOnCompletion = NO;
+    // 缩放倍数
+    animation.fromValue = [NSNumber numberWithFloat:1.04]; // 开始时的倍率
+    animation.toValue = [NSNumber numberWithFloat:0.99];
+    [view.layer addAnimation:animation forKey:@&quot;ScaleAnimation&quot;];
+}
+</code></pre>
+<h5 id="动画的暂停与启动">动画的暂停与启动</h5>
+<pre><code class="language-objective-c">+ (void)pauseAnimationToView:(UIView* )view {
+    CFTimeInterval pausedTime = [view.layer convertTime:CACurrentMediaTime() fromLayer:nil];
+    view.layer.speed = 0.0;
+    view.layer.timeOffset = pausedTime;
+}
+
++ (void)resumeAnimationToView:(UIView* )view {
+    CFTimeInterval pausedTime = [view.layer timeOffset];
+    view.layer.speed = 1.0;
+    view.layer.timeOffset = 0.0;
+    view.layer.beginTime = 0.0;
+    CFTimeInterval timeSincePause = [view.layer convertTime:CACurrentMediaTime() fromLayer:nil] - pausedTime;
+    view.layer.beginTime = timeSincePause;
+}
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#%E4%B8%8A%E4%B8%8B%E7%A7%BB%E5%8A%A8%E5%8A%A8%E7%94%BB">上下移动动画</a></li>
+<li><a href="#%E6%94%BE%E5%A4%A7%E7%BC%A9%E5%B0%8F%E5%8A%A8%E7%94%BB">放大缩小动画</a></li>
+<li><a href="#%E5%8A%A8%E7%94%BB%E7%9A%84%E6%9A%82%E5%81%9C%E4%B8%8E%E5%90%AF%E5%8A%A8">动画的暂停与启动</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://bairdweng.github.io/post/guan-yu-ios-shou-shi-de-yi-xie-chu-li-fang-shi/">
+              <h3 class="post-title">
+                关于iOS手势的一些处理方式
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
+  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

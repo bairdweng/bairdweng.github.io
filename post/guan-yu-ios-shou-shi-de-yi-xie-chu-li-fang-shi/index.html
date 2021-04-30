@@ -1,0 +1,298 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>关于iOS手势的一些处理方式 | bairdweng</title>
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619780688797">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="关于iOS手势的一些处理方式 | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="1. iOS中UINavigationController有一个滑动返回的处理事件。
+
+
+常常在开发的时候会遇到一些问题，例如pageViewController，UIScrollView，UITableView等。
+
+
+当出现这些控件的时..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://bairdweng.github.io">
+  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619780688797" alt="">
+  </a>
+  <h1 class="site-title">
+    bairdweng
+  </h1>
+  <p class="site-description">
+    个人笔记
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              关于iOS手势的一些处理方式
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-30
+              </span>
+              <span>
+                5 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h5 id="1-ios中uinavigationcontroller有一个滑动返回的处理事件">1. iOS中UINavigationController有一个滑动返回的处理事件。</h5>
+<ol>
+<li>
+<p>常常在开发的时候会遇到一些问题，例如pageViewController，UIScrollView，UITableView等。</p>
+</li>
+<li>
+<p>当出现这些控件的时候，滑动返回将失效，这时候的做法是，自定义<strong>ScrollView</strong></p>
+<pre><code class="language-objective-c">- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    if ([self isPanBack:gestureRecognizer]) {
+        return YES;
+    }
+    return NO;
+}
+// 是否是返回手势
+- (BOOL)isPanBack:(UIGestureRecognizer *)ges {
+    if (ges == self.panGestureRecognizer &amp;&amp; self.contentOffset.x &lt;= 0) {
+        return YES;
+    }
+    return NO;
+}
+</code></pre>
+</li>
+<li>
+<p>问题解决。</p>
+</li>
+</ol>
+<h5 id="2-一些常用的手势方法总结">2. 一些常用的手势方法总结。</h5>
+<ol>
+<li>
+<p>手势状态</p>
+<pre><code class="language-objective-c">//当前手势状态
+typedef NS_ENUM(NSInteger, UIGestureRecognizerState) {
+    //尚未识别是何种手势操作（但可能已经触发了触摸事件），默认状态
+    UIGestureRecognizerStatePossible,   
+    //手势已经开始，此时已经被识别，但是这个过程中可能发生变化，手势操作尚未完成
+    UIGestureRecognizerStateBegan,     
+    //手势状态发生改变
+    UIGestureRecognizerStateChanged, 
+    // 手势识别操作完成（此时已经松开手指）  
+    UIGestureRecognizerStateEnded, 
+    //手势被取消，恢复到默认状态   
+    UIGestureRecognizerStateCancelled, 
+    //手势识别失败，恢复到默认状态
+    UIGestureRecognizerStateFailed,    
+    //手势识别完成，同end
+    UIGestureRecognizerStateRecognized = UIGestureRecognizerStateEnded 
+};
+</code></pre>
+</li>
+<li>
+<p>方法以及属性</p>
+<pre><code class="language-objective-c">//创建一个手势对象并添加触发事件
+- (instancetype)initWithTarget:(nullable id)target action:(nullable SEL)action NS_DESIGNATED_INITIALIZER; 
+//给一个手势对象添加监听事件
+- (void)addTarget:(id)target action:(SEL)action;   
+//移除一个手势的监听事件
+- (void)removeTarget:(nullable id)target action:(nullable SEL)action; 
+//获取当前手势状态
+@property(nonatomic,readonly) UIGestureRecognizerState state;  
+//委托
+@property(nullable,nonatomic,weak) id &lt;UIGestureRecognizerDelegate&gt; delegate; 
+//手势识别是否可用
+@property(nonatomic, getter=isEnabled) BOOL enabled;  
+//获取手势触摸的View视图 只读
+@property(nullable, nonatomic,readonly) UIView *view;         
+//是否取消触摸控件的响应
+/*
+默认为YES，这种情况下当手势识别器识别到触摸之后，会发送touchesCancelled给触摸到的控件以取消控件view对touch的响应，这个时候只有手势识别器响应touch，当设置成NO时，手势识别器识别到触摸之后不会发送touchesCancelled给控件，这个时候手势识别器和控件view均响应touch。
+注意：手势识别和触摸事件是同时存在的，只是因为touchesCancelled导致触摸事件失效
+*/
+@property(nonatomic) BOOL cancelsTouchesInView; 
+
+
+/是否延迟发送触摸事件给触摸到的控件
+默认是NO，这种情况下当发生一个触摸时，手势识别器先捕捉到到触摸，然后发给触摸到的控件，两者各自做出响应。如果设置为YES，手势识别器在识别的过程中（注意是识别过程），不会将触摸发给触摸到的控件，即控件不会有任何触摸事件。只有在识别失败之后才会将触摸事件发给触摸到的控件，这种情况下控件view的响应会延迟约0.15ms。
+@property(nonatomic) BOOL delaysTouchesBegan;     
+  
+//如果触摸识别失败是否立即结束本次手势识别的触摸事件
+@property(nonatomic) BOOL delaysTouchesEnded;        
+/*
+指定一个手势需要另一个手势执行失败才会执行，同时触发多个手势使用其中一个手势的解决办法
+有时手势是相关联的，如单机和双击，点击和长按，点下去瞬间可能只会识别到单击无法识别其他，该方法可以指定某一个 手势，即便自己已经满足条件了，也不会立刻触发，会等到该指定的手势确定失败之后才触发
+*/
+- (void)requireGestureRecognizerToFail:(UIGestureRecognizer *)otherGestureRecognizer;
+
+//获取当前触摸在指定视图上的点
+- (CGPoint)locationInView:(nullable UIView*)view;                               
+
+//获取触摸手指数
+- (NSUInteger)numberOfTouches;                                         
+
+//多指触摸的触摸点相对于指定视图的位置
+- (CGPoint)locationOfTouch:(NSUInteger)touchIndex inView:(nullable UIView*)view; 
+
+
+</code></pre>
+</li>
+<li>
+<p>代理方法</p>
+<pre><code class="language-objective-c">// 开始进行手势识别时调用的方法，返回NO则结束识别，不再触发手势，用处：可以在控件指定的位置使用手势识别
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer;
+</code></pre>
+<pre><code class="language-objective-c">// 这个方法返回YES，第一个手势和第二个互斥时，第一个会失效
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRequireFailureOfGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
+
+</code></pre>
+<pre><code class="language-objective-c">// 这个方法返回YES，第一个和第二个互斥时，第二个会失效
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldBeRequiredToFailByGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer;
+
+</code></pre>
+<pre><code class="language-objective-c">// 手指触摸屏幕后回调的方法，返回NO则不再进行手势识别，方法触发等
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch;
+</code></pre>
+<pre><code class="language-objective-c">//是否同时支持多种手势
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer{
+  return YES;
+}
+</code></pre>
+</li>
+</ol>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#1-ios%E4%B8%ADuinavigationcontroller%E6%9C%89%E4%B8%80%E4%B8%AA%E6%BB%91%E5%8A%A8%E8%BF%94%E5%9B%9E%E7%9A%84%E5%A4%84%E7%90%86%E4%BA%8B%E4%BB%B6">1. iOS中UINavigationController有一个滑动返回的处理事件。</a></li>
+<li><a href="#2-%E4%B8%80%E4%BA%9B%E5%B8%B8%E7%94%A8%E7%9A%84%E6%89%8B%E5%8A%BF%E6%96%B9%E6%B3%95%E6%80%BB%E7%BB%93">2. 一些常用的手势方法总结。</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://bairdweng.github.io/post/cong-calayer-de-position-he-anchorpoint-shuo-qi/">
+              <h3 class="post-title">
+                从CAlayer的position和AnchorPoint说起
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
+  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

@@ -1,0 +1,305 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UIWindow相关 | bairdweng</title>
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619780688797">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="UIWindow相关 | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="1. 前台Window的处理。
+
+
+参考SVProgressView.
+    
+- (UIWindow *)frontWindow {
+#if !defined(SV_APP_EXTENSIONS)
+  // 获取Application中..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://bairdweng.github.io">
+  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619780688797" alt="">
+  </a>
+  <h1 class="site-title">
+    bairdweng
+  </h1>
+  <p class="site-description">
+    个人笔记
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              UIWindow相关
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-30
+              </span>
+              <span>
+                4 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h5 id="1-前台window的处理">1. 前台Window的处理。</h5>
+<ol>
+<li>
+<p>参考SVProgressView.</p>
+<pre><code class="language-objective-c">    
+- (UIWindow *)frontWindow {
+#if !defined(SV_APP_EXTENSIONS)
+  // 获取Application中的所有Window实例。
+    NSEnumerator *frontToBackWindows = [UIApplication.sharedApplication.windows reverseObjectEnumerator];
+    for (UIWindow *window in frontToBackWindows) {
+        // 判断screen是不是主页面的screen。
+        BOOL windowOnMainScreen = window.screen == UIScreen.mainScreen;
+        // window是否被隐藏。
+        BOOL windowIsVisible = !window.hidden &amp;&amp; window.alpha &gt; 0;
+        // 等级是否被支持。
+        BOOL windowLevelSupported = (window.windowLevel &gt;= UIWindowLevelNormal &amp;&amp; window.windowLevel &lt;= self.maxSupportedWindowLevel);
+        // 是否是isKeyWindow。
+        BOOL windowKeyWindow = window.isKeyWindow;
+        if(windowOnMainScreen &amp;&amp; windowIsVisible &amp;&amp; windowLevelSupported &amp;&amp; windowKeyWindow) {
+            return window;
+        }
+    }
+#endif
+    return nil;
+}
+</code></pre>
+</li>
+<li>
+<p>UIWindowLevel的理解</p>
+<blockquote>
+<p>UIWindowLevel为2D的iOS世界引入了Z轴的概念，它相当于以屏幕为原地，以使用者为正方向的一根轴。值越小代表离使用者越远，越大代表越靠近使用者。高Level的Window会盖住低Level的window，若是两者Level一样则根据添加顺序来决定，这类似于我们添加子View(UIWindow本来也就是UIView的子类)。而上面三个值分别是0.0,2000.0,1000.0，而大部分在App上使用的都是UIWindowLevelNormal，这也是每个Window被创建出来时的默认值。    我们在创建一个新的window的时候，要让它显示出来必须要调用makeKeyAndVisible方法，让window显示出来，并让它成为一个KeyWindow。KeyWindow是UIApplication的一个开放属性，它是当前App的主window，用来接收键盘输入以及非触摸事件(触摸事件是传递给触摸事件发生的window，不一定是keyWindow，或者是跟坐标值无关的事件都会被传递给keyWindow。并且在同一时刻，只有一个window会成为keyWindow。但是需要注意一件事情，成为keywindow与windowLevel无关，并不是windowLevel最高的window会成为keywindow.</p>
+</blockquote>
+</li>
+<li>
+<p>UIScreen的理解，屏幕对象，主要有mainScreen，Screens。</p>
+</li>
+</ol>
+<h5 id="2-获取当前显示的视图控制器">2. 获取当前显示的视图控制器。</h5>
+<ol>
+<li>
+<p>获取当前的视图控制器。</p>
+<pre><code class="language-objective-c">/* 完整的描述请参见文件头部 */
++ (UIViewController *)findCurrentShowingViewController {
+    //获得当前活动窗口的根视图
+    UIViewController *vc = [UIApplication sharedApplication].keyWindow.rootViewController;
+    UIViewController *currentShowingVC = [self findCurrentShowingViewControllerFrom:vc];
+    return currentShowingVC;
+}
+//注意考虑几种特殊情况：①A present B, B present C，参数vc为A时候的情况
+/* 完整的描述请参见文件头部 */
++ (UIViewController *)findCurrentShowingViewControllerFrom:(UIViewController *)vc {
+    //方法1：递归方法 Recursive method
+    UIViewController *currentShowingVC;
+    if ([vc presentedViewController]) { //注要优先判断vc是否有弹出其他视图，如有则当前显示的视图肯定是在那上面
+        // 当前视图是被presented出来的
+        UIViewController *nextRootVC = [vc presentedViewController];
+        currentShowingVC = [self findCurrentShowingViewControllerFrom:nextRootVC];
+        
+    } else if ([vc isKindOfClass:[UITabBarController class]]) {
+        // 根视图为UITabBarController
+        UIViewController *nextRootVC = [(UITabBarController *)vc selectedViewController];
+        currentShowingVC = [self findCurrentShowingViewControllerFrom:nextRootVC];
+        
+    } else if ([vc isKindOfClass:[UINavigationController class]]){
+        // 根视图为UINavigationController
+        UIViewController *nextRootVC = [(UINavigationController *)vc visibleViewController];
+        currentShowingVC = [self findCurrentShowingViewControllerFrom:nextRootVC];
+        
+    } else {
+        // 根视图为非导航类
+        currentShowingVC = vc;
+    }
+    return currentShowingVC;
+}
+</code></pre>
+<pre><code> 2. 获取View所属的视图控制器
+</code></pre>
+<pre><code class="language-objective-c">#pragma mark 获取View所属的视图控制器。
++ (nullable UIViewController *)findBelongViewControllerForView:(UIView *)view {
+    UIResponder *responder = view;
+    while ((responder = [responder nextResponder])) {
+        if ([responder isKindOfClass: [UIViewController class]]) {
+            return (UIViewController *)responder;
+        }
+    }
+    return nil;
+}
+</code></pre>
+</li>
+</ol>
+<h5 id="3-uiwindow-作为alert承载vc的方法">3. UIWindow 作为Alert承载VC的方法</h5>
+<ol>
+<li>
+<p>初始化window</p>
+<pre><code class="language-objective-c">- (UIWindow *)window {
+	if (!_window) {
+		_window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+		_window.windowLevel = UIWindowLevelAlert;
+		_window.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+		_window.opaque = NO;
+	}
+	return _window;
+}
+</code></pre>
+</li>
+<li>
+<p>设置vc</p>
+<pre><code class="language-objective-c">- (void)show {
+	[self.window setRootViewController:self];
+	[self.window makeKeyAndVisible];
+}
+
+- (void)dissShow {
+	self.window = nil;
+}
+</code></pre>
+</li>
+</ol>
+<h5 id="4-uiwindo-makekeyandvisible-与-windowlevel的关系">4. UIWindo makeKeyAndVisible 与 windowLevel的关系</h5>
+<ol>
+<li>能遇到这种情况，当通过初始化一个UIWindow然后设置RootVc的时候，通常用于代替presentViewController的时候。</li>
+<li>在当前VC再次通过UIWindow setRootVc，设置Level为Alert级别，当AlertWindow消失。</li>
+<li>第一种情况的UIWindow也会被销毁，为啥？</li>
+</ol>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li><a href="#1-%E5%89%8D%E5%8F%B0window%E7%9A%84%E5%A4%84%E7%90%86">1. 前台Window的处理。</a></li>
+<li><a href="#2-%E8%8E%B7%E5%8F%96%E5%BD%93%E5%89%8D%E6%98%BE%E7%A4%BA%E7%9A%84%E8%A7%86%E5%9B%BE%E6%8E%A7%E5%88%B6%E5%99%A8">2. 获取当前显示的视图控制器。</a></li>
+<li><a href="#3-uiwindow-%E4%BD%9C%E4%B8%BAalert%E6%89%BF%E8%BD%BDvc%E7%9A%84%E6%96%B9%E6%B3%95">3. UIWindow 作为Alert承载VC的方法</a></li>
+<li><a href="#4-uiwindo-makekeyandvisible-%E4%B8%8E-windowlevel%E7%9A%84%E5%85%B3%E7%B3%BB">4. UIWindo makeKeyAndVisible 与 windowLevel的关系</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://bairdweng.github.io/post/uiview-de-ji-ge-shua-xin-fang-fa/">
+              <h3 class="post-title">
+                UIView的几个刷新方法
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
+  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>
