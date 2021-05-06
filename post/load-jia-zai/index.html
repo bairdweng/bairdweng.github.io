@@ -1,92 +1,80 @@
+
+<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+<meta charset="utf-8" >
+
 <title>load加载 | bairdweng</title>
-<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619780964989">
-<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<meta name="description" content="个人笔记">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1620267371705">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="load加载 | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="1. 加载顺序
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
 
 
-一定先加载父类。
 
-
-然后再加载子类
-
-
-最后加载类的拓展category
-2021-03-31 10:00:53.809778+0800 HelloObjc[37208:776579] Hello==========+..." />
-    <meta name="keywords" content="" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
-    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
   </head>
   <body>
-    <div class="main">
-      <div class="main-content">
-        <div class="site-header">
-  <a href="https://bairdweng.github.io">
-  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619780964989" alt="">
-  </a>
-  <h1 class="site-title">
-    bairdweng
-  </h1>
-  <p class="site-description">
-    个人笔记
-  </p>
-  <div class="menu-container">
-    
-      
-        <a href="/" class="menu">
-          首页
-        </a>
-      
-    
-      
-        <a href="/archives" class="menu">
-          归档
-        </a>
-      
-    
-  </div>
-  <div class="social-container">
-    
-      
-    
-      
-    
-      
-    
-      
-    
-      
-    
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://bairdweng.github.io">
+        <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1620267371705" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://bairdweng.github.io">
+        <h1 class="site-title">bairdweng</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
   </div>
 </div>
 
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
         <div class="post-detail">
-          <article class="post">
-            <h2 class="post-title">
-              load加载
-            </h2>
-            <div class="post-info">
-              <span>
-                2021-04-30
-              </span>
-              <span>
-                2 min read
-              </span>
-              
-            </div>
+          
+          <h2 class="post-title">load加载</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2021-04-30</span>
             
-            <div class="post-content-wrapper">
-              <div class="post-content">
-                <h5 id="1-加载顺序">1. 加载顺序</h5>
+          </div>
+          <div class="post-content">
+            <h5 id="1-加载顺序">1. 加载顺序</h5>
 <ol>
 <li>
 <p>一定先加载父类。</p>
@@ -190,97 +178,57 @@ Program ended with exit code: 0
 </li>
 </ul>
 
-              </div>
-              <div class="toc-container">
-                <ul class="markdownIt-TOC">
-<li>
-<ul>
-<li>
-<ul>
-<li>
-<ul>
-<li>
-<ul>
-<li><a href="#1-%E5%8A%A0%E8%BD%BD%E9%A1%BA%E5%BA%8F">1. 加载顺序</a></li>
-<li><a href="#2-%E4%B8%BA%E4%BB%80%E4%B9%88%E7%88%B6%E7%B1%BB%E4%BC%98%E5%85%88-%E5%AD%90%E7%B1%BB-category">2. 为什么父类优先-&gt; 子类 -&gt;category</a></li>
-<li><a href="#3-load%E7%9A%84%E5%BA%94%E7%94%A8">3. load的应用</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-
-              </div>
-            </div>
-          </article>
+          </div>
         </div>
 
         
           <div class="next-post">
-            <div class="next">下一篇</div>
-            <a href="https://bairdweng.github.io/post/crash-fang-hu-fang-an/">
+            <a class="purple-link" href="https://bairdweng.github.io/post/crash-fang-hu-fang-an/">
               <h3 class="post-title">
-                crash防护方案
+                下一篇：crash防护方案
               </h3>
             </a>
           </div>
-        
+          
+      </div>
 
-        
+      
 
-        <div class="site-footer">
-  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
-  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
-    <i class="ri-rss-line"></i> RSS
-  </a>
+      <div class="site-footer">
+  <div class="slogan">个人笔记</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a> | <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">RSS</a>
 </div>
 
-      </div>
+
     </div>
+    <script type="application/javascript">
 
-    <script>
-      hljs.initHighlightingOnLoad()
+hljs.initHighlightingOnLoad()
 
-      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
 
-      // This should probably be throttled.
-      // Especially because it triggers during smooth scrolling.
-      // https://lodash.com/docs/4.17.10#throttle
-      // You could do like...
-      // window.addEventListener("scroll", () => {
-      //    _.throttle(doThatStuff, 100);
-      // });
-      // Only not doing it here to keep this Pen dependency-free.
+</script>
 
-      window.addEventListener("scroll", event => {
-        let fromTop = window.scrollY;
 
-        mainNavLinks.forEach((link, index) => {
-          let section = document.getElementById(decodeURI(link.hash).substring(1));
-          let nextSection = null
-          if (mainNavLinks[index + 1]) {
-            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
-          }
-          if (section.offsetTop <= fromTop) {
-            if (nextSection) {
-              if (nextSection.offsetTop > fromTop) {
-                link.classList.add("current");
-              } else {
-                link.classList.remove("current");    
-              }
-            } else {
-              link.classList.add("current");
-            }
-          } else {
-            link.classList.remove("current");
-          }
-        });
-      });
 
-    </script>
+
   </body>
 </html>

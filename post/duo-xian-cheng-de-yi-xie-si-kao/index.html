@@ -1,85 +1,80 @@
+
+<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+<meta charset="utf-8" >
+
 <title>多线程的一些思考 | bairdweng</title>
-<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1619780964989">
-<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<meta name="description" content="个人笔记">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1620267371705">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
-<link rel="alternate" type="application/atom+xml" title="多线程的一些思考 | bairdweng - Atom Feed" href="https://bairdweng.github.io/atom.xml">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
 
 
 
-    <meta name="description" content="1. 为什么使用多线程？
-主要是利用CPU多核的优势，并行处理一些任务。一旦涉及到多任务处理，就是产生数据不一致的问题，这时候就需要有锁的来确保数据的统一跟安全。
-2. 数据放在哪里，为什么会数据不安全呢？
-例如有个变量 int = 100..." />
-    <meta name="keywords" content="" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
-    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
   </head>
   <body>
-    <div class="main">
-      <div class="main-content">
-        <div class="site-header">
-  <a href="https://bairdweng.github.io">
-  <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1619780964989" alt="">
-  </a>
-  <h1 class="site-title">
-    bairdweng
-  </h1>
-  <p class="site-description">
-    个人笔记
-  </p>
-  <div class="menu-container">
-    
-      
-        <a href="/" class="menu">
-          首页
-        </a>
-      
-    
-      
-        <a href="/archives" class="menu">
-          归档
-        </a>
-      
-    
-  </div>
-  <div class="social-container">
-    
-      
-    
-      
-    
-      
-    
-      
-    
-      
-    
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://bairdweng.github.io">
+        <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1620267371705" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://bairdweng.github.io">
+        <h1 class="site-title">bairdweng</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
   </div>
 </div>
 
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
         <div class="post-detail">
-          <article class="post">
-            <h2 class="post-title">
-              多线程的一些思考
-            </h2>
-            <div class="post-info">
-              <span>
-                2021-04-30
-              </span>
-              <span>
-                3 min read
-              </span>
-              
-            </div>
+          
+          <h2 class="post-title">多线程的一些思考</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2021-04-30</span>
             
-            <div class="post-content-wrapper">
-              <div class="post-content">
-                <h5 id="1-为什么使用多线程">1. 为什么使用多线程？</h5>
+          </div>
+          <div class="post-content">
+            <h5 id="1-为什么使用多线程">1. 为什么使用多线程？</h5>
 <p>主要是利用CPU多核的优势，并行处理一些任务。一旦涉及到多任务处理，就是产生数据不一致的问题，这时候就需要有锁的来确保数据的统一跟安全。</p>
 <h5 id="2-数据放在哪里为什么会数据不安全呢">2. 数据放在哪里，为什么会数据不安全呢？</h5>
 <p>例如有个变量 int = 100；然后开启3个线程对他进行累加1000次，预期应该是3000，但实际上可能更小，原因是，在加的过程中分为，读，改，写三个步骤，此时的步骤不是原子性，假如线程1现在读的数据是300，由于没有加锁，线程2在此刻已经完成了三个步骤，数字已经改成了301。如何这时候线程1在写回去，数据变成了301，但实际应该是302。</p>
@@ -127,92 +122,49 @@
 <li>自旋锁，互斥锁，读写锁。</li>
 </ol>
 
-              </div>
-              <div class="toc-container">
-                <ul class="markdownIt-TOC">
-<li>
-<ul>
-<li>
-<ul>
-<li>
-<ul>
-<li>
-<ul>
-<li><a href="#1-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8%E5%A4%9A%E7%BA%BF%E7%A8%8B">1. 为什么使用多线程？</a></li>
-<li><a href="#2-%E6%95%B0%E6%8D%AE%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E6%95%B0%E6%8D%AE%E4%B8%8D%E5%AE%89%E5%85%A8%E5%91%A2">2. 数据放在哪里，为什么会数据不安全呢？</a></li>
-<li><a href="#3-ios%E4%B8%AD%E7%BA%BF%E7%A8%8B%E7%9A%84%E4%B8%BB%E8%A6%81%E6%96%B9%E5%BC%8F%E6%9C%89%E5%93%AA%E4%BA%9B">3. iOS中线程的主要方式有哪些？</a></li>
-<li><a href="#5-%E5%85%B3%E4%BA%8Ensopration">5. 关于NSOpration</a></li>
-<li><a href="#4-%E5%85%B3%E4%BA%8Egcd%E7%9A%84%E4%BD%BF%E7%94%A8">4. 关于GCD的使用</a></li>
-<li><a href="#5%E5%85%B3%E4%BA%8E%E7%BA%BF%E7%A8%8B%E7%9A%84%E9%80%9A%E8%AE%AF">5.关于线程的通讯</a></li>
-<li><a href="#6-%E5%85%B3%E4%BA%8E%E9%94%81%E7%9A%84%E4%B8%80%E4%BA%9B%E6%80%BB%E7%BB%93">6. 关于锁的一些总结</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-
-              </div>
-            </div>
-          </article>
+          </div>
         </div>
 
         
+      </div>
 
-        
+      
 
-        <div class="site-footer">
-  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a>
-  <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">
-    <i class="ri-rss-line"></i> RSS
-  </a>
+      <div class="site-footer">
+  <div class="slogan">个人笔记</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a> | <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">RSS</a>
 </div>
 
-      </div>
+
     </div>
+    <script type="application/javascript">
 
-    <script>
-      hljs.initHighlightingOnLoad()
+hljs.initHighlightingOnLoad()
 
-      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
 
-      // This should probably be throttled.
-      // Especially because it triggers during smooth scrolling.
-      // https://lodash.com/docs/4.17.10#throttle
-      // You could do like...
-      // window.addEventListener("scroll", () => {
-      //    _.throttle(doThatStuff, 100);
-      // });
-      // Only not doing it here to keep this Pen dependency-free.
+</script>
 
-      window.addEventListener("scroll", event => {
-        let fromTop = window.scrollY;
 
-        mainNavLinks.forEach((link, index) => {
-          let section = document.getElementById(decodeURI(link.hash).substring(1));
-          let nextSection = null
-          if (mainNavLinks[index + 1]) {
-            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
-          }
-          if (section.offsetTop <= fromTop) {
-            if (nextSection) {
-              if (nextSection.offsetTop > fromTop) {
-                link.classList.add("current");
-              } else {
-                link.classList.remove("current");    
-              }
-            } else {
-              link.classList.add("current");
-            }
-          } else {
-            link.classList.remove("current");
-          }
-        });
-      });
 
-    </script>
+
   </body>
 </html>
