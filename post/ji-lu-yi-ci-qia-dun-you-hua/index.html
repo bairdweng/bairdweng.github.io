@@ -1,0 +1,228 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>记录一次卡顿优化 | bairdweng</title>
+<meta name="description" content="个人笔记">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bairdweng.github.io/favicon.ico?v=1623318869134">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://bairdweng.github.io/styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://bairdweng.github.io">
+        <img class="avatar" src="https://bairdweng.github.io/images/avatar.png?v=1623318869134" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://bairdweng.github.io">
+        <h1 class="site-title">bairdweng</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">记录一次卡顿优化</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2021-06-10</span>
+            
+          </div>
+          <div class="post-content">
+            <p>由于项目采用bugly做性能检测，可以看到im中有大量的用户sql查询造成的卡顿。需要进行卡顿分析</p>
+<ol>
+<li>
+<p>查询卡顿代码</p>
+<pre><code class="language-objective-c">	[[BWFMDB shareDataBase]asyncExecute:^(FMDatabase * _Nonnull db, BOOL * _Nonnull rollback) {
+	         NSError *error;
+	         [db executeUpdate:sql values:params error:&amp;error];
+	         if (error) {
+			 // 回滚
+			 *rollback = YES;
+		 }
+	 }
+	];
+</code></pre>
+</li>
+<li>
+<p>卡顿定位</p>
+<pre><code class="language-objective-c">...
+while (!self.cancelled) {
+		// 读取卡顿的时间
+		double threshold = [BWMonUtil sharedInstance].threshold;
+		if (_isApplicationInActive) {
+			self.mainThreadBlock = YES;
+			self.reportInfo = @&quot;&quot;;
+			self.startTimeValue = [[NSDate date] timeIntervalSince1970];
+			dispatch_async(dispatch_get_main_queue(), ^{
+				self.mainThreadBlock = NO;
+				verifyReport();
+				dispatch_semaphore_signal(self.semaphore);
+			});
+			// 如果达到休眠阀值，主线程还未执行完，说明已经卡顿了。
+			[NSThread sleepForTimeInterval:threshold];
+			if (self.isMainThreadBlock) {
+				self.reportInfo = [BWBacktraceLogger doraemon_backtraceOfMainThread];
+			}
+			dispatch_semaphore_wait(self.semaphore, dispatch_time(DISPATCH_TIME_NOW, 5.0 * NSEC_PER_SEC));
+			{
+				//卡顿超时情况;
+				verifyReport();
+			}
+		} else {
+			[NSThread sleepForTimeInterval:threshold];
+		}
+	}
+...
+</code></pre>
+</li>
+<li>
+<p>如果定位到卡顿的位置，那么可以着手进行优化，由于用户是缓存在本地，采用FMDB进行数据处理，虽然FMDB可以在异步进行查询，但由于庞大的业务以及历史原因，无法进行重构。所以思路是采用缓存处理，避免每次查询用户信息都执行sql。我们在测试FMDB性能，在大量查询之后性能会下降得非常厉害。</p>
+<pre><code class="language-objective-c">@interface DYIMUserCacheManage : NSObject
+WF_AS_SINGLETION(DYIMUserCacheManage)
+
+- (void)saveUser:(DYIMUser *)user;
+- (DYIMUser *)getUserFromId:(int64_t)uid;
+@property(nonatomic, strong) YYMemoryCache *cache;
+
+@end
+
+@implementation DYIMUserCacheManage
+
+WF_DEF_SINGLETION(DYIMUserCacheManage)
+- (instancetype)init {
+	self = [super init];
+	if (self) {
+		self.cache = [YYMemoryCache new];
+		self.cache.name = @&quot;miya_friends&quot;;
+		//内存中最大缓存数据个数，超过这个数会根据lru算法自动清理。
+		self.cache.countLimit = 500;
+	}
+	return self;
+}
+
+- (void)saveUser:(DYIMUser *)user {
+	NSString *key = [self getKeyFromId:user.userId];
+	[self.cache setObject:[user yy_modelToJSONObject] forKey:key];
+}
+
+- (DYIMUser *)getUserFromId:(int64_t)uid {
+	NSString *key = [self getKeyFromId:uid];
+	DYIMUser *user = [DYIMUser yy_modelWithJSON:[self.cache objectForKey:key]];
+	return user;
+}
+
+- (NSString *)getKeyFromId:(int64_t)uid {
+	int64_t currentUserId = WFService(IPlayerService).playId;
+	NSString *key = [NSString stringWithFormat:@&quot;%lld#%lld&quot;,currentUserId,uid];
+	return key;
+}
+
+@end
+
+</code></pre>
+</li>
+<li>
+<p><a href="https://github.com/bairdweng/BWANRManage">卡顿检测工具</a></p>
+</li>
+</ol>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://bairdweng.github.io/post/uiwindow-xiang-guan/">
+              <h3 class="post-title">
+                下一篇：UIWindow相关
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">个人笔记</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/bairdweng" target="_blank">Gridea</a> | <a class="rss" href="https://bairdweng.github.io/atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

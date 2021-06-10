@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://bairdweng.github.io</id>
     <title>bairdweng</title>
-    <updated>2021-05-06T02:16:16.002Z</updated>
+    <updated>2021-06-10T09:54:34.120Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://bairdweng.github.io"/>
     <link rel="self" href="https://bairdweng.github.io/atom.xml"/>
@@ -10,6 +10,13 @@
     <logo>https://bairdweng.github.io/images/avatar.png</logo>
     <icon>https://bairdweng.github.io/favicon.ico</icon>
     <rights>All rights reserved 2021, bairdweng</rights>
+    <entry>
+        <title type="html"><![CDATA[记录一次卡顿优化]]></title>
+        <id>https://bairdweng.github.io/post/ji-lu-yi-ci-qia-dun-you-hua/</id>
+        <link href="https://bairdweng.github.io/post/ji-lu-yi-ci-qia-dun-you-hua/">
+        </link>
+        <updated>2021-06-10T09:45:07.000Z</updated>
+    </entry>
     <entry>
         <title type="html"><![CDATA[UIWindow相关]]></title>
         <id>https://bairdweng.github.io/post/uiwindow-xiang-guan/</id>
@@ -72,12 +79,5 @@
         <link href="https://bairdweng.github.io/post/xing-neng-you-hua/">
         </link>
         <updated>2021-04-30T10:59:17.000Z</updated>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[iOS如何设计网络库?]]></title>
-        <id>https://bairdweng.github.io/post/ios-ru-he-she-ji-wang-luo-ku/</id>
-        <link href="https://bairdweng.github.io/post/ios-ru-he-she-ji-wang-luo-ku/">
-        </link>
-        <updated>2021-04-30T10:58:24.000Z</updated>
     </entry>
 </feed>
